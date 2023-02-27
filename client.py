@@ -1,6 +1,10 @@
+import errno
 import socket
-import threading
 from tkinter import *
+from cryptography.fernet import Fernet
+from tkinter import messagebox
+# Handshake code = 75RJM202y299U8a34fYGjojPAlP3nfzb
+# Successfully connected code = o2rWLN8eduep9O6cUfrmBEKF1jh8LOpB
 
 
 class Client():
@@ -24,45 +28,62 @@ class Client():
         self.chat_box = chat_box
 
 
-def write(message):
-    client.sock.send(bytes(message, 'utf-8'))
-
-
 def receive():
     while client.running:
-        print("here")
         try:
+
             message = client.sock.recv(1024)
-            print(message)
-            if message.decode('utf-8') == "USER":
-                print("the username message got throught")
+            if fernet.decrypt(message).decode('utf-8') == "75RJM202y299U8a34fYGjojPAlP3nfzb":
+                print("handshake recieved")
+                # TODO setup userdata file, that contains username, password, and user_id to automatically sign in
                 client.sock.send(client.username)
+
+            elif fernet.decrypt(message).decode('utf-8') == "o2rWLN8eduep9O6cUfrmBEKF1jh8LOpB":
+                messagebox.showinfo("Connected.", "Successfully connected to target machine.")
+
             else:
-                update_chat_box(message)
+                update_chat_box(fernet.decrypt(message).decode('utf-8'), 0)
+
+        except OSError as e:
+            if e.errno == errno.ENOTSOCK:
+                break
+
         except ConnectionAbortedError:
-            break
+            update_chat_box("The server has been closed.", 2)
 
 
 def prepare_for_send():
     message = client.text_box.get("1.0", END)
-    # TODO throw error here
-    if message == "":
-        pass
+    if message.strip() == "":
+        messagebox.showerror("Error", "You cannot send a blank message.")
 
     else:
-        write(message)
+        client.sock.send(fernet.encrypt(message.encode()))
     client.text_box.delete('1.0', END)
 
 
 def stop():
     client.running = False
     client.sock.close()
-    exit(0)
 
 
-def update_chat_box(message):
+def update_chat_box(message, method):
+    # Enables the chatbox
     client.chat_box.config(state="normal")
-    client.chat_box.insert(END, message)
+
+    # This will print a regular message.
+    if method == 0:
+        client.chat_box.insert(END, message)
+
+    # This will print a client connection message in green.
+    elif method == 1:
+        client.chat_box.insert(END, message, 'connection')
+
+    # This will print a server or client disconnect message in red.
+    elif method == 2:
+        client.chat_box.insert(END, message, 'disconnection')
+
+    # Disables the chatbox
     client.chat_box.config(state="disabled")
 
 
@@ -71,4 +92,14 @@ def on_closing():
     exit(0)
 
 
+def decrypt_incoming(message):
+    fernet.decrypt(message).decode('utf-8')
+
+
+def encrypt_outgoing(message):
+    pass
+
+
+encryption_key = b'e9iRDX8f-2GiHwWi_toavUnscTwWz6AwVwdAf53y6wY='
+fernet = Fernet(encryption_key)
 client = Client()
