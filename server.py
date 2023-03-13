@@ -4,10 +4,12 @@ import threading
 from cryptography.fernet import Fernet
 # Handshake code = 75RJM202y299U8a34fYGjojPAlP3nfzb
 
+
 class ServerData:
     def __init__(self):
         self.self = self
         self.running = True
+
 
 HOST = "0.0.0.0"
 PORT = 80
@@ -48,10 +50,6 @@ def handle(client):
 
         except ConnectionAbortedError:
             break
-
-
-
-
 
 
 def receive():
@@ -100,6 +98,9 @@ def server_control_terminal():
     else:
         print("Unknown command.")
         server_control_terminal()
+    # TODO add command to kick & or ban user by UID
+    #  use complex commands by using .split on input to take in multiple commands at once EX: list uid(lists all uids)
+    #  pretty print using print("{: >20} {: >20} {: >20}".format(*row))
 
 
 print("Starting server.")
