@@ -3,8 +3,6 @@ import socket
 from tkinter import *
 from cryptography.fernet import Fernet
 from tkinter import messagebox
-# Handshake code = 75RJM202y299U8a34fYGjojPAlP3nfzb
-# Successfully connected code = o2rWLN8eduep9O6cUfrmBEKF1jh8LOpB
 
 
 class Client():
@@ -32,7 +30,7 @@ def receive():
     while client.running:
         try:
 
-            message = client.sock.recv(1024)
+            message = client.sock.recv(2024)
             if fernet.decrypt(message).decode('utf-8') == "75RJM202y299U8a34fYGjojPAlP3nfzb":
                 print("handshake recieved")
                 # TODO setup userdata file, that contains username, password, and user_id to automatically sign in

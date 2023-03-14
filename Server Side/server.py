@@ -3,6 +3,8 @@ import socket
 import threading
 from cryptography.fernet import Fernet
 # Handshake code = 75RJM202y299U8a34fYGjojPAlP3nfzb
+# General chat identifier code = 3rIP4sf5VA6QC2oIYFiepjtb7HWp97SK
+# Personal chat identifier code =
 
 
 class ServerData:
@@ -34,11 +36,12 @@ def broadcast(message):
 def handle(client):
     while True:
         try:
-            message = client.recv(1024)
+            message = client.recv(2024)
             if fernet.decrypt(message).decode('utf-8') == 'quit':
                 break
 
             else:
+                print(len(message))
                 broadcast(message)
 
         except ConnectionResetError:
@@ -56,9 +59,8 @@ def receive():
     while True:
         try:
             client, address = server.accept()
-            print(f"Connection from {address}.")
+            print(f"Connection attempt from {address}.")
 
-            # change below
             client.send(fernet.encrypt('75RJM202y299U8a34fYGjojPAlP3nfzb'.encode()))
             username = client.recv(1024)
 

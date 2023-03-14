@@ -31,4 +31,4 @@ def update_json_file(path, location, data):
 #update_json_file('userdata.json', 'users', sample_data)
 
 
-configure_json_file('userdata.json', sample_json_structure)
+configure_json_file('Server Side/userdata.json', sample_json_structure)
