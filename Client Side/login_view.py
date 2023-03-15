@@ -2,11 +2,13 @@ from tkinter import *
 import time
 
 
-class LoginView:
+class LoginView(str):
     def __init__(self):
         # GUI variables
         self.self = self
         self.root = None
+        # Default method is sign in
+        self.selected_method = 0
 
         # Entries
         self.username_entry = None
@@ -20,16 +22,20 @@ class LoginView:
     def start_gui(self):
         # GUI variables
         self.root = Tk()
+        self.root.title("Sign In / Sign Up")
+        self.root.protocol("WM_DELETE_WINDOW", self.close)
 
         # <<<<---- Initializing gui objects. ---->>>> #
         # Entries
         self.username_entry = Entry(self.root)
         self.password_entry = Entry(self.root)
 
-        # Buttons
+        # Buttonsb
         self.submit_button = Button(self.root, text="Submit", padx=20)
-        self.sign_in_button = Button(self.root, text="Sign In")
-        self.sign_up_button = Button(self.root, text="Sign Up")
+        self.sign_in_button = Button(self.root, relief=SUNKEN, text="Sign In",
+                                     command=lambda: self.method_button_pressed(0))
+        self.sign_up_button = Button(self.root, text="Sign Up",
+                                     command=lambda: self.method_button_pressed(1))
 
         # <<<<---- Packing gui objects. ---->>>> #
         # Entries
@@ -44,12 +50,19 @@ class LoginView:
         # Start the mainloop
         self.root.mainloop()
 
-    def on_window_close(self):
-        pass
+    def close(self):
+        self.root.destroy()
+        self.__init__()
 
     def submit_pressed(self):
-        pass
+        return [self.username_entry.get(), self.password_entry.get()]
 
+    def method_button_pressed(self, selected):
+        self.selected_method = selected
+        if selected == 0:
+            self.sign_in_button.config(relief=SUNKEN)
+            self.sign_up_button.config(relief=RAISED)
+        else:
+            self.sign_in_button.config(relief=RAISED)
+            self.sign_up_button.config(relief=SUNKEN)
 
-login_view = LoginView()
-login_view.start_gui()

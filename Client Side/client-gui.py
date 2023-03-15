@@ -3,7 +3,9 @@ from tkinter import *
 from tkinter import scrolledtext
 from tkinter import simpledialog
 import client
-
+from login_view import LoginView
+login_view = LoginView()
+login_view.start_gui()
 
 def on_closing():
     client.client.sock.close()
@@ -23,10 +25,13 @@ text_box.grid(row=1, column=0, columnspan=3)
 send_button.grid(row=1, column=3, columnspan=1)
 
 root.protocol("WM_DELETE_WINDOW", client.on_closing)
-username = simpledialog.askstring("Username", "What will your temporary username be?")
+login_view.wait_window()
+username = login_view.submit_pressed()
+print(username)
 
-client.client.config("192.168.1.189", 80, username, text_box, chat_box)
+
+"""client.client.config("192.168.1.189", 80, username, text_box, chat_box)
 cl = threading.Thread(target=client.receive)
-cl.start()
+cl.start()"""
 root.protocol("WM_DELETE_WINDOW", on_closing)
 root.mainloop()

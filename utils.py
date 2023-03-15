@@ -1,6 +1,7 @@
 import json
 
 
+
 def configure_json_file(path, structure):
     with open(path, 'w') as file:
         file.write(json.dumps(structure, separators=(',', ':'), indent=5))
