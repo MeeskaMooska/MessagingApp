@@ -19,3 +19,4 @@ json file structures:
                      sender_username(string)
                  message(string)
                         
+as of 3/16/23 I have decided to revice the initial client.py and client-gui.py modules. so that will be the next update. eta on that is 3/18/23
