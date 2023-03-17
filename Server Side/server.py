@@ -1,8 +1,11 @@
+import sys
+import os
 import errno
 import socket
 import threading
 from cryptography.fernet import Fernet
-import json
+sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+from utils import configure_json_file, collect_json_from_file, update_json_file
 
 # Using these variables makes the program much more understandable and easier to write.
 handshake_code = '75RJM202y299U8a34fYGjojPAlP3nfzb'
@@ -11,6 +14,7 @@ general_chat_code = "3rIP4sf5VA6QC2oIYFiepjtb7HWp97SK"
 personal_chat_code = 'F26RUPmRikmepuz4vdUkaSH4fHgWcMO3'
 login_code = 'z7eLQzZ7gmnqx4C6JQML6nMpjP0Nc1Ex'
 sign_up_code = 'ClyGibkmr9JBMo8CpFpMyLrfvXTxXbkV'
+new_user_id_code = 'gemVWz769eDyy7EBK3MXPePGT3UfCuHZ'
 
 # Sign In/Up communication structure:
 #   32b(communication id code) + 32b(user_id(8b), username(24b)) + 32b(password)
@@ -26,6 +30,7 @@ class ServerData:
     def __init__(self):
         self.self = self
         self.running = True
+        self.current_id = collect_json_from_file('server_info.json')['current_id']
 
 
 HOST = "0.0.0.0"
@@ -88,6 +93,7 @@ def receive():
             if communication_identifier == login_code:
                 stored_user_info = collect_json_from_file('userdata.json')['users'][received_user_id]
                 stored_username, stored_password = stored_user_info[0], stored_user_info[1]
+
                 if (stored_username == received_username) & (stored_password == received_password):
                     clients.append(client)
                     user_ids.append(received_user_id)
@@ -103,7 +109,8 @@ def receive():
                     pass
 
             elif communication_identifier == sign_up_code:
-                pass
+                client.send(fernet.encrypt((new_user_id_code + str(server_data.current_id).encode())))
+                server_data.current_id = generate_user_id(server_data.current_id)
 
             else:
                 # I plan to handle this differently in the future but this is it for now.
@@ -134,7 +141,7 @@ def server_control_terminal():
     elif command == 'list':
         print('%-12s %-28s %s' % ('User ID', 'Username', 'Address'))
         for i in range(len(clients)):
-            print('%-12s %-28s %s' % (user_ids[i], usernames[i], clients[i]))
+            print('%-12s %-28s %s' % (user_ids[i], usernames[i], "doesnt work yet"))
         server_control_terminal()
 
     else:
@@ -146,20 +153,9 @@ def server_control_terminal():
     #  pretty print using print("{: >20} {: >20} {: >20}".format(*row))
 
 
-def configure_json_file(path, structure):
-    with open(path, 'w') as file:
-        file.write(json.dumps(structure, separators=(',', ':'), indent=5))
-
-
-def collect_json_from_file(path):
-    with open(path, 'rt') as file:
-        return json.loads(file.read())
-
-
-def update_json_file(path, location, data):
-    updated_file_data = collect_json_from_file(path)[location][data[0]] = data[1]
-    with open(path, 'w') as file:
-        file.write(json.dumps(updated_file_data, separators=(',', ':'), indent=5))
+# Returns the next 8 digit user id
+def generate_user_id(current_id):
+    return ('0' * (8 - len(str(current_id + 1)))) + str(current_id + 1)
 
 
 print("Starting server...")

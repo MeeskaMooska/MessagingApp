@@ -1,9 +1,10 @@
 import threading
-import time
 from tkinter import *
 from tkinter import scrolledtext
-from tkinter import simpledialog
 from client import client, prepare_for_send, receive
+
+login_code = 'z7eLQzZ7gmnqx4C6JQML6nMpjP0Nc1Ex'
+sign_up_code = 'ClyGibkmr9JBMo8CpFpMyLrfvXTxXbkV'
 
 
 def padded_text(text, length):
@@ -12,9 +13,14 @@ def padded_text(text, length):
     return text
 
 
-
 class MainWindow:
     def __init__(self):
+        self.root = None
+        self.chat_box = None
+        self.text_box = None
+        self.send_button = None
+
+    def config_gui(self):
         self.root = Tk()
         self.root.resizable(False, False)
         self.chat_box = scrolledtext.ScrolledText(self.root, state="disabled", padx=30)
@@ -25,19 +31,21 @@ class MainWindow:
         self.text_box.grid(row=1, column=0, columnspan=3)
         self.send_button.grid(row=1, column=3, columnspan=1)
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)
-        self.root.mainloop()
 
     def on_close(self):
         #TODO create init class the clear everything and then call here.
         self.root.destroy()
         client.sock.close()
 
+
+main_window = MainWindow()
+
+
 class LoginWindow(str):
     def __init__(self):
         # GUI variables
         self.self = self
         self.root = None
-        self.signed_in = None
         # Default method is sign in
         self.selected_method = 0
 
@@ -49,20 +57,21 @@ class LoginWindow(str):
         self.submit_button = None
         self.sign_in_button = None
         self.sign_up_button = None
-        self.start_gui()
 
     def start_gui(self):
         # GUI variables
         self.root = Tk()
         self.root.title("Sign In / Sign Up")
-        self.root.protocol("WM_DELETE_WINDOW", self.close)
+        self.root.protocol("WM_DELETE_WINDOW", self.exit)
 
         # <<<<---- Initializing gui objects. ---->>>> #
         # Entries
         self.username_entry = Entry(self.root)
         self.password_entry = Entry(self.root)
+        self.username_entry.insert(0, 'MeeskaMooska')
+        self.password_entry.insert(0, 'testpassword')
 
-        # Buttonsb
+        # Buttons
         self.submit_button = Button(self.root, text="Submit", padx=20, command=self.submit_pressed)
         self.sign_in_button = Button(self.root, relief=SUNKEN, text="Sign In",
                                      command=lambda: self.method_button_pressed(0))
@@ -82,17 +91,34 @@ class LoginWindow(str):
         # Start the mainloop
         self.root.mainloop()
 
-    def close(self):
+    def exit(self):
         self.root.destroy()
+        self.__init__()
 
     def submit_pressed(self):
-        user_id = 12345678
-        username = self.username_entry.get()
-        password = self.password_entry.get()
-        client.config_socket("192.168.1.189", 80, str(user_id) + padded_text(username, 24) + padded_text(password, 32))
-        cl = threading.Thread(target=receive)
-        cl.start()
-        self.signed_in = True
+        if self.selected_method == 0:
+            user_id = 12345678
+            username = self.username_entry.get()
+            password = self.password_entry.get()
+            main_window.config_gui()
+            client.config_socket("192.168.1.189", 80, main_window,
+                                 str(user_id) + padded_text(username, 24) + padded_text(password, 32), login_code)
+            cl = threading.Thread(target=receive)
+            cl.start()
+            self.exit()
+            main_window.root.mainloop()
+
+        else:
+            user_id = 12345678
+            username = self.username_entry.get()
+            password = self.password_entry.get()
+            main_window.config_gui()
+            client.config_socket("192.168.1.189", 80, main_window,
+                                 str(user_id) + padded_text(username, 24) + padded_text(password, 32), sign_up_code)
+            cl = threading.Thread(target=receive)
+            cl.start()
+            self.exit()
+            main_window.root.mainloop()
 
     def method_button_pressed(self, selected):
         self.selected_method = selected
@@ -105,8 +131,4 @@ class LoginWindow(str):
 
 
 login_window = LoginWindow()
-
-
-if login_window.signed_in:
-    main_window = MainWindow()
-    client.config_main_gui(main_window.text_box, main_window.chat_box)
+login_window.start_gui()
