@@ -26,12 +26,14 @@ class Client:
         self.text_box = None
         self.chat_box = None
 
-    def config(self, host, port, username, text_box, chat_box):
+    def config_socket(self, host, port, username):
         self.HOST = host
         self.PORT = port
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.connect((self.HOST, self.PORT))
-        self.username = bytes(username, 'utf-8')
+        self.username = username
+
+    def config_main_gui(self, text_box, chat_box):
         self.text_box = text_box
         self.chat_box = chat_box
 
@@ -41,13 +43,14 @@ def receive():
         try:
 
             message = client.sock.recv(2024)
-            if fernet.decrypt(message).decode('utf-8') == "75RJM202y299U8a34fYGjojPAlP3nfzb":
+            if fernet.decrypt(message).decode('utf-8') == handshake_code:
                 print("handshake recieved")
                 # TODO setup userdata file, that contains username, password, and user_id to automatically sign in
-                client.sock.send(fernet.encrypt(client.username))
+                client.sock.send(fernet.encrypt(bytes(login_code + client.username, 'utf-8')))
 
-            elif fernet.decrypt(message).decode('utf-8') == "o2rWLN8eduep9O6cUfrmBEKF1jh8LOpB":
-                messagebox.showinfo("Connected.", "Successfully connected to target machine.")
+            elif fernet.decrypt(message).decode('utf-8') == successful_handshake_code:
+                print('This worked.')
+                #messagebox.showinfo("Connected.", "Successfully connected to target machine.")
 
             else:
                 update_chat_box(fernet.decrypt(message).decode('utf-8'), 0)
@@ -106,12 +109,6 @@ def encrypt_outgoing():
 
 def decrypt_incoming():
     pass
-
-
-def padded_text(text, length):
-    padding_amount = length - len(text)
-    text = text + ('/' * padding_amount)
-    return text
 
 
 encryption_key = b'e9iRDX8f-2GiHwWi_toavUnscTwWz6AwVwdAf53y6wY='

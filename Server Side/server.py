@@ -90,7 +90,6 @@ def receive():
                 stored_username, stored_password = stored_user_info[0], stored_user_info[1]
                 if (stored_username == received_username) & (stored_password == received_password):
                     clients.append(client)
-                    # TODO change  to store user_ids to prevent multiple users getting confused.
                     user_ids.append(received_user_id)
                     usernames.append(received_username)
 

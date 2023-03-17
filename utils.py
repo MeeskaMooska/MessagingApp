@@ -1,5 +1,5 @@
 import json
-
+# may delete later depending on how this is used in client.
 
 
 def configure_json_file(path, structure):
