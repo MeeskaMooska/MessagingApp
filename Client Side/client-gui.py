@@ -2,6 +2,7 @@ import threading
 from tkinter import *
 from tkinter import scrolledtext
 from client import client, prepare_for_send, receive
+import json
 
 login_code = 'z7eLQzZ7gmnqx4C6JQML6nMpjP0Nc1Ex'
 sign_up_code = 'ClyGibkmr9JBMo8CpFpMyLrfvXTxXbkV'
@@ -68,8 +69,6 @@ class LoginWindow(str):
         # Entries
         self.username_entry = Entry(self.root)
         self.password_entry = Entry(self.root)
-        self.username_entry.insert(0, 'MeeskaMooska')
-        self.password_entry.insert(0, 'testpassword')
 
         # Buttons
         self.submit_button = Button(self.root, text="Submit", padx=20, command=self.submit_pressed)
@@ -97,7 +96,7 @@ class LoginWindow(str):
 
     def submit_pressed(self):
         if self.selected_method == 0:
-            user_id = 12345678
+            user_id = collect_json_from_file('client_info.json')['user_id']
             username = self.username_entry.get()
             password = self.password_entry.get()
             main_window.config_gui()
@@ -109,12 +108,11 @@ class LoginWindow(str):
             main_window.root.mainloop()
 
         else:
-            user_id = 12345678
             username = self.username_entry.get()
             password = self.password_entry.get()
             main_window.config_gui()
             client.config_socket("192.168.1.189", 80, main_window,
-                                 str(user_id) + padded_text(username, 24) + padded_text(password, 32), sign_up_code)
+                                 padded_text(username, 24) + padded_text(password, 32), sign_up_code)
             cl = threading.Thread(target=receive)
             cl.start()
             self.exit()
@@ -128,6 +126,11 @@ class LoginWindow(str):
         else:
             self.sign_in_button.config(relief=RAISED)
             self.sign_up_button.config(relief=SUNKEN)
+
+
+def collect_json_from_file(path):
+    with open(path, 'r') as file:
+        return json.loads(file.read())
 
 
 login_window = LoginWindow()

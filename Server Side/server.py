@@ -1,11 +1,8 @@
-import sys
-import os
 import errno
+import json
 import socket
 import threading
 from cryptography.fernet import Fernet
-sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
-from utils import configure_json_file, collect_json_from_file, update_json_file
 
 # Using these variables makes the program much more understandable and easier to write.
 handshake_code = '75RJM202y299U8a34fYGjojPAlP3nfzb'
@@ -30,7 +27,7 @@ class ServerData:
     def __init__(self):
         self.self = self
         self.running = True
-        self.current_id = collect_json_from_file('server_info.json')['current_id']
+        self.current_id = str(collect_json_from_file('server_info.json')['current_id'])
 
 
 HOST = "0.0.0.0"
@@ -59,11 +56,10 @@ def handle(client):
     while True:
         try:
             message = client.recv(2024)
-            if fernet.decrypt(message).decode('utf-8') == 'quit':
+            if decrypt_incoming(message) == 'quit':
                 break
 
             else:
-                print(len(message))
                 broadcast(message)
 
         except ConnectionResetError:
@@ -84,14 +80,14 @@ def receive():
             client, address = server.accept()
             print(f"Connection attempt from {address}.")
 
-            client.send(fernet.encrypt(handshake_code.encode()))
-            communication = fernet.decrypt(client.recv(2024)).decode('utf-8')
+            client.send(encrypt_outgoing(handshake_code))
+            communication = decrypt_incoming(client.recv(2024))
             communication_identifier = communication[0:32]
-            received_user_id, received_username, received_password = \
-                communication[32:40], communication[40:64].strip('/'), communication[64:-1].strip('/')
 
             if communication_identifier == login_code:
-                stored_user_info = collect_json_from_file('userdata.json')['users'][received_user_id]
+                received_user_id, received_username, received_password = \
+                    communication[32:40], communication[40:64].strip('/'), communication[64:].strip('/')
+                stored_user_info = collect_json_from_file('user_data.json')[received_user_id]
                 stored_username, stored_password = stored_user_info[0], stored_user_info[1]
 
                 if (stored_username == received_username) & (stored_password == received_password):
@@ -99,8 +95,8 @@ def receive():
                     user_ids.append(received_user_id)
                     usernames.append(received_username)
 
-                    broadcast(fernet.encrypt(f"{received_username} connected.\n".encode()))
-                    client.send(fernet.encrypt((successful_handshake_code.encode())))
+                    broadcast(encrypt_outgoing(f"{received_username} connected.\n"))
+                    client.send(encrypt_outgoing(successful_handshake_code))
 
                     thread = threading.Thread(target=handle, args=(client,))
                     thread.start()
@@ -109,8 +105,23 @@ def receive():
                     pass
 
             elif communication_identifier == sign_up_code:
-                client.send(fernet.encrypt((new_user_id_code + str(server_data.current_id).encode())))
+                user_id = server_data.current_id
+                received_username, received_password = \
+                    communication[32:56].strip('/'), communication[56:].strip('/')
+                client.send(encrypt_outgoing(new_user_id_code + user_id))
                 server_data.current_id = generate_user_id(server_data.current_id)
+
+                if decrypt_incoming(client.recv(2024)) == successful_handshake_code:
+                    update_user_data_json('user_data.json', [user_id, [received_username, received_password]])
+                    clients.append(client)
+                    user_ids.append(user_id)
+                    usernames.append(received_username)
+
+                    broadcast(encrypt_outgoing(f"{received_username} connected.\n"))
+                    client.send(encrypt_outgoing(successful_handshake_code))
+
+                    thread = threading.Thread(target=handle, args=(client,))
+                    thread.start()
 
             else:
                 # I plan to handle this differently in the future but this is it for now.
@@ -135,6 +146,8 @@ def server_control_terminal():
     command = input()
     if command == 'terminate':
         print('Closing Server...')
+        with open('server_info.json', 'w') as file:
+            file.write(json.dumps({'current_id': server_data.current_id}, separators=(',', ':'), indent=5))
         server.close()
         terminate_connections()
 
@@ -155,7 +168,32 @@ def server_control_terminal():
 
 # Returns the next 8 digit user id
 def generate_user_id(current_id):
-    return ('0' * (8 - len(str(current_id + 1)))) + str(current_id + 1)
+    return ('0' * (8 - len(str(int(current_id) + 1)))) + str(int(current_id) + 1)
+
+
+def configure_json_file(path, structure):
+    with open(path, 'w') as file:
+        file.write(json.dumps(structure, separators=(',', ':'), indent=5))
+
+
+def collect_json_from_file(path):
+    with open(path, 'rt') as file:
+        return json.loads(file.read())
+
+
+def update_user_data_json(path, data):
+    file_data = collect_json_from_file(path)
+    file_data[data[0]] = data[1]
+    with open(path, 'w') as file:
+        file.write(json.dumps(file_data, separators=(',', ':'), indent=5))
+
+
+def encrypt_outgoing(message):
+    return fernet.encrypt(message.encode())
+
+
+def decrypt_incoming(message):
+    return fernet.decrypt(message).decode('utf-8')
 
 
 print("Starting server...")

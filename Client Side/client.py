@@ -1,14 +1,9 @@
-import sys
-import os
 import errno
 import socket
 from tkinter import *
 from cryptography.fernet import Fernet
+import json
 from tkinter import messagebox
-sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
-from utils import configure_json_file, collect_json_from_file, update_json_file
-
-
 
 handshake_code = '75RJM202y299U8a34fYGjojPAlP3nfzb'
 successful_handshake_code = "o2rWLN8eduep9O6cUfrmBEKF1jh8LOpB"
@@ -19,9 +14,6 @@ sign_up_code = 'ClyGibkmr9JBMo8CpFpMyLrfvXTxXbkV'
 new_user_id_code = 'gemVWz769eDyy7EBK3MXPePGT3UfCuHZ'
 
 
-# test user login info: z7eLQzZ7gmnqx4C6JQML6nMpjP0Nc1Ex12345678MeeskaMooska////////////testpassword////////////
-
-
 class Client:
     def __init__(self):
         self.self = self
@@ -29,12 +21,12 @@ class Client:
         self.HOST = None
         self.PORT = None
         self.sock = None
-        self.username = None
+        self.user_data = None
         self.text_box = None
         self.chat_box = None
         self.login_method = None
 
-    def config_socket(self, host, port, main_window, username, login_method):
+    def config_socket(self, host, port, main_window, user_data, login_method):
         self.HOST = host
         self.PORT = port
         self.text_box = main_window.text_box
@@ -42,7 +34,7 @@ class Client:
         print(type(self.chat_box))
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.connect((self.HOST, self.PORT))
-        self.username = username
+        self.user_data = user_data
         self.login_method = login_method
 
 
@@ -53,17 +45,26 @@ def receive():
             message = fernet.decrypt(client.sock.recv(2024)).decode('utf-8')
 
             if message == handshake_code:
-                print("handshake recieved")
-                # TODO setup userdata file, that contains username, password, and user_id to automatically sign in
-                client.sock.send(fernet.encrypt(bytes(client.login_method + client.username, 'utf-8')))
+                # Sends data input by user in log in screen.
+                client.sock.send(encrypt_outgoing(client.login_method + client.user_data))
 
             elif message == successful_handshake_code:
-                print('This worked.')
+                # Not entirely sure if this is necessary.
+                print('This worked')
 
-            elif message == new_user_id_code:
-                print(message[32:-1])
-                configure_json_file('client_info.json', {"user_id": message[32:-1]})
+            # Reads first 32 bytes of message.
+            elif message[0:32] == new_user_id_code:
+                # File data is created and assigned value of last eight bytes of message.
+                file_data = {'user_id': message[32:]}
 
+                # File data is written to json file, and read the next time someone tries to sign in.
+                with open('client_info.json', 'w') as file:
+                    file.write(json.dumps(file_data, separators=(',', ':'), indent=5))
+
+                # Confirmation of successful storage of user id is sent, client joins server as normal.
+                client.sock.send(encrypt_outgoing(successful_handshake_code))
+
+            # A regular message has been sent to general chat.
             else:
                 update_chat_box(message, 0)
 
@@ -72,6 +73,7 @@ def receive():
             if e.errno == errno.ENOTSOCK:
                 break
 
+        # Handles the termination of server.(Not well apparently, plan to fix)
         except ConnectionAbortedError:
             update_chat_box("The server has been closed.", 2)
 
@@ -82,7 +84,7 @@ def prepare_for_send():
         messagebox.showerror("Error", "You cannot send a blank message.")
 
     else:
-        client.sock.send(fernet.encrypt(message.encode()))
+        client.sock.send(encrypt_outgoing(message))
     client.text_box.delete('1.0', END)
 
 
@@ -117,12 +119,29 @@ def on_closing():
     exit(0)
 
 
-def encrypt_outgoing():
-    pass
+def configure_json_file(path, structure):
+    with open(path, 'w') as file:
+        file.write(json.dumps(structure, separators=(',', ':'), indent=5))
 
 
-def decrypt_incoming():
-    pass
+def collect_json_from_file(path):
+    with open(path, 'r') as file:
+        return json.loads(file.read())
+
+
+
+def update_json_file(path, location, data):
+    updated_file_data = collect_json_from_file(path)[location][data[0]] = data[1]
+    with open(path, 'w') as file:
+        file.write(json.dumps(updated_file_data, separators=(',', ':'), indent=5))
+
+
+def encrypt_outgoing(message):
+    return fernet.encrypt(message.encode())
+
+
+def decrypt_incoming(message):
+    return fernet.decrypt(message).decode('utf-8')
 
 
 encryption_key = b'e9iRDX8f-2GiHwWi_toavUnscTwWz6AwVwdAf53y6wY='
